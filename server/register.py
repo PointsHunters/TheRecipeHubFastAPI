@@ -5,6 +5,8 @@ from server.users import User
 def signup(request_body, connection_string):
     user = User.from_dict(request_body)
 
+    user.username = user.validate_username()
+    user.fullname = user.validate_fullname()
     user.email = user.validate_email()
     user.password = user.validate_password()
 
@@ -26,6 +28,6 @@ def signin(request_body, connection_string):
         raise ValueError("Password mismatch.")
 
     existing_user.password = None
-    existing_user.second_password = None
+    # existing_user.second_password = None
 
     return existing_user

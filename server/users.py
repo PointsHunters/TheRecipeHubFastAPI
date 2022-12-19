@@ -4,15 +4,96 @@ import json
 class User:
     special_characters = ["*", "?", "!", "#", "&", "=", "(", ")", "_", "-"]
 
-    def __init__(self, id=None, name=None, email=None, password=None, second_password=None):
+    def __init__(self, id=None, username=None, fullname=None, email=None, password=None, second_password=None):
         self.id = id
-        self.name = name
+        self.username = username
+        self.fullname = fullname
         self.email = email
         self.password = password
         self.second_password = second_password
         self.created_at = None
         self.updated_at = None
         # self.special_characters = ["*", "?", "!", "#", "&", "=", "(", ")", "_", "-"]
+
+    def validate_username(self):
+        # eliminate spaces
+        present_spaces = self.username.find(" ")
+        if present_spaces > -1:
+            raise ValueError("Invalid username. Username contains spaces.")
+
+        # validate length
+        if len(self.username) < 3:
+            raise ValueError("Invalid username. Username too short. Minimum 3 characters required.")
+
+        # validate special characters
+        present_special = 0
+        # present_digits = 0
+        # present_upper = 0
+        for character in self.username:
+            if character in self.special_characters:
+                present_special += 1  # present_special_characters = present_special_characters + 1
+
+            # if character.isdigit():
+            #     present_digits += 1
+
+            # if character.isupper():
+            #     present_upper += 1
+
+            if present_special:
+                break
+            # if present_special and present_digits and present_upper:
+            #     break
+
+        if present_special != 0:
+            raise ValueError("Invalid username. Special characters are not allowed.")
+
+        # if present_digits == 0:
+        #     raise ValueError("Invalid password. Missing at least one digit.")
+
+        # if present_upper == 0:
+        #     raise ValueError("Invalid password. Missing at least one upper case letter.")
+        
+        return self.username
+
+    def validate_fullname(self):
+        # eliminate spaces
+        # present_spaces = self.fullname.find(" ")
+        # if present_spaces > -1:
+        #     raise ValueError("Invalid fullname. Fullname contains spaces.")
+
+        # validate length
+        if len(self.fullname) < 3:
+            raise ValueError("Invalid fullname. Fullname too short. Minimum 3 characters required.")
+
+        # validate special characters
+        present_special = 0
+        present_digits = 0
+        # present_upper = 0
+        for character in self.fullname:
+            if character in self.special_characters:
+                present_special += 1  # present_special_characters = present_special_characters + 1
+
+            if character.isdigit():
+                present_digits += 1
+
+            # if character.isupper():
+            #     present_upper += 1
+
+            if present_special and present_digits:
+                break
+            # if present_special and present_digits and present_upper:
+            #     break
+
+        if present_special != 0:
+            raise ValueError("Invalid fullname. Special characters are not allowed.")
+
+        if present_digits != 0:
+            raise ValueError("Invalid fullname. Numbers are not allowed.")
+
+        # if present_upper == 0:
+        #     raise ValueError("Invalid password. Missing at least one upper case letter.")
+        
+        return self.fullname
 
     def validate_email(self):
         email = self.email.lower()
@@ -77,14 +158,15 @@ class User:
     @classmethod
     def from_dict(cls, user_dict):
         id = user_dict.get("id")
-        name = user_dict.get("name")
+        username = user_dict.get("username")
+        fullname = user_dict.get("fullname")
         email = user_dict.get("email")
         password = user_dict.get("password")
         second_password = user_dict.get("second_password")
         created_at = user_dict.get("created_at")
         updated_at = user_dict.get("updated_at")
 
-        obj = cls(id=id, name=name, email=email, password=password, second_password=second_password)
+        obj = cls(id=id, username=username, fullname=fullname, email=email, password=password, second_password=second_password)
         obj.created_at = created_at
         obj.updated_at = updated_at
         return obj
@@ -95,18 +177,20 @@ class User:
             raise ValueError("Invalid user details.")
 
         id = user_list[0]
-        name = user_list[1]
-        email = user_list[2]
-        password = user_list[3]
-        second_password = user_list[4]
+        username = user_list[1]
+        fullname = user_list[2]
+        email = user_list[3]
+        password = user_list[4]
+        second_password = user_list[5]
 
-        obj = cls(id=id, name=name, email=email, password=password, second_password=second_password)
+        obj = cls(id=id, username=username, fullname=fullname, email=email, password=password, second_password=second_password)
         return obj
 
     def to_dict(self):
         user_dict = {
             "id": self.id,
-            "name": self.name,
+            "username": self.username,
+            "fullname": self.fullname,
             "email": self.email,
             "password": self.password,
             "second_password": self.second_password,

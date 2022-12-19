@@ -1,23 +1,24 @@
+# uvicorn main:app --reload
 import datetime
 import json
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from pydantic import BaseModel
 
 from server.register import signup, signin
-from server.repository import CONNECTION_STRING, get_all_users, edit_user_by_email
+from server.repository import CONNECTION_STRING, get_all_users, edit_user_by_email, search_for_email, delete_user_by_email
 from server.users import User
 
 app = FastAPI()
 
-class Item(BaseModel):
-    id: int | None = None
-    name: str
-    email: str
-    password: str
-    second_password: str
-    created_at: str | None = None
-    updated_at: str | None = None
+# class UserRegister(BaseModel):
+#     id: int | None = None
+#     name: str | None = None
+#     email: str | None = None
+#     password: str | None = None
+#     second_password: str | None = None
+#     created_at: str | None = None
+#     updated_at: str | None = None
 
 @app.get("/")
 def welcome():
@@ -36,10 +37,17 @@ def version():
     response = json.dumps(response)
     return response, 200
 
+class UserRegister(BaseModel):
+    username: str
+    fullname: str
+    email: str
+    password: str
+    second_password: str
+
 @app.post("/api/v1/register")
-def register(request: Item):
+def register(dbmodel: UserRegister):
     try:
-        request_body = request.dict()
+        request_body = dbmodel.dict()
         print(request_body)
         signup(request_body, CONNECTION_STRING)
         return "", 204
@@ -50,10 +58,15 @@ def register(request: Item):
         error_json = json.dumps(error_message)
         return error_json, 500
 
+class UserAuthenticate(BaseModel):
+    email: str
+    password: str
+    # second_password: str
+
 @app.post("/api/v1/authenticate")
-def authenticate(request: Item):
+def authenticate(dbmodel: UserAuthenticate):
     try:
-        request_body = request.json
+        request_body = dbmodel.dict()
         user = signin(request_body, CONNECTION_STRING)
         return user.to_json(), 200
     except Exception as e:
@@ -63,14 +76,14 @@ def authenticate(request: Item):
         error_json = json.dumps(error_message)
         return error_json, 500
 
-@app.api_route("/api/v1/users", methods=["GET", "PUT", "DELETE"]) # put delete
-def users(request: Item):
+@app.get("/api/v1/users")
+def users(request: Request):
     if request.method == "GET":
         try:
             users = get_all_users(CONNECTION_STRING)
             response = [user.to_dict() for user in users]
             response = json.dumps(response)
-            return response, 200
+            return json.loads(response), 200 # response converted to json
         except Exception as e:
             error_message = {
                 "error": f"Failed to get all users. Cause: {e}."
@@ -78,18 +91,56 @@ def users(request: Item):
             error_json = json.dumps(error_message)
             return error_json, 500
 
-    if request.method == "PUT":
-        request_body = request.json
-        if request_body.get("email") is None:
-            error_message = {
-                "error": f"Failed to update user. Missing user email."
-            }
-            error_json = json.dumps(error_message)
-            return error_json, 500
+class UserUpdate(BaseModel):
+    username: str | None = None
+    fullname: str | None = None
+    email: str
+    password: str
 
-        user = User.from_dict(request_body)
-        edit_user_by_email(user, CONNECTION_STRING)
-        return "", 204
+@app.put("/api/v1/users")
+def users(dbmodel: UserUpdate, request: Request):
+    request_body = dbmodel.dict()
+    user = User.from_dict(request_body)
+    current_email = request_body.get("email") 
 
-    if request.method == "DELETE":
-        pass
+    if current_email is None:
+        error_message = {
+            "error": f"Failed to update user. Missing user email."
+        }
+        error_json = json.dumps(error_message)
+        return error_json, 500
+    elif search_for_email(user, CONNECTION_STRING):
+        error_message = {
+            "error": f"Failed to update user. User not found."
+        }
+        error_json = json.dumps(error_message)
+        return error_json, 500
+
+    edit_user_by_email(user, CONNECTION_STRING)
+    return "", 204
+
+class UserDelete(BaseModel):
+    email: str
+    password: str
+
+@app.delete("/api/v1/users")
+def users(dbmodel: UserDelete, request: Request):
+    request_body = dbmodel.dict()
+    user = User.from_dict(request_body)
+    current_email = request_body.get("email")
+
+    if current_email is None:
+        error_message = {
+            "error": f"Failed to delete user. Missing user email."
+        }
+        error_json = json.dumps(error_message)
+        return error_json, 500
+    elif search_for_email(user, CONNECTION_STRING):
+        error_message = {
+            "error": f"Failed to delete user. User not found."
+        }
+        error_json = json.dumps(error_message)
+        return error_json, 500
+
+    delete_user_by_email(user, CONNECTION_STRING)
+    return "", 204
