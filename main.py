@@ -21,11 +21,11 @@ app = FastAPI()
 #     updated_at: str | None = None
 
 @app.get("/")
-def welcome():
+async def welcome():
     return "<h1>Welcome to TheRecipeHub's API</h1>", 200
 
 @app.get("/api/v1/version")
-def version():
+async def version():
     now = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S")
 
     response = {
@@ -45,7 +45,7 @@ class UserRegister(BaseModel):
     second_password: str
 
 @app.post("/api/v1/register")
-def register(dbmodel: UserRegister):
+async def register(dbmodel: UserRegister):
     try:
         request_body = dbmodel.dict()
         print(request_body)
@@ -64,10 +64,10 @@ class UserAuthenticate(BaseModel):
     # second_password: str
 
 @app.post("/api/v1/authenticate")
-def authenticate(dbmodel: UserAuthenticate):
+async def authenticate(dbmodel: UserAuthenticate):
     try:
         request_body = dbmodel.dict()
-        user = signin(request_body, CONNECTION_STRING)
+        user = await signin(request_body, CONNECTION_STRING)
         return user.to_json(), 200
     except Exception as e:
         error_message = {
@@ -77,10 +77,10 @@ def authenticate(dbmodel: UserAuthenticate):
         return error_json, 500
 
 @app.get("/api/v1/users")
-def users(request: Request):
+async def users(request: Request):
     if request.method == "GET":
         try:
-            users = get_all_users(CONNECTION_STRING)
+            users = await get_all_users(CONNECTION_STRING)
             response = [user.to_dict() for user in users]
             response = json.dumps(response)
             return json.loads(response), 200 # response converted to json
@@ -98,7 +98,7 @@ class UserUpdate(BaseModel):
     password: str
 
 @app.put("/api/v1/users")
-def users(dbmodel: UserUpdate, request: Request):
+async def users(dbmodel: UserUpdate, request: Request):
     request_body = dbmodel.dict()
     user = User.from_dict(request_body)
     current_email = request_body.get("email") 
@@ -109,14 +109,14 @@ def users(dbmodel: UserUpdate, request: Request):
         }
         error_json = json.dumps(error_message)
         return error_json, 500
-    elif search_for_email(user, CONNECTION_STRING):
+    elif await search_for_email(user, CONNECTION_STRING):
         error_message = {
             "error": f"Failed to update user. User not found."
         }
         error_json = json.dumps(error_message)
         return error_json, 500
 
-    edit_user_by_email(user, CONNECTION_STRING)
+    await edit_user_by_email(user, CONNECTION_STRING)
     return "", 204
 
 class UserDelete(BaseModel):
@@ -141,6 +141,11 @@ def users(dbmodel: UserDelete, request: Request):
         }
         error_json = json.dumps(error_message)
         return error_json, 500
-
+    elif signin(request_body, CONNECTION_STRING) is None:
+        error_message = {
+            "error": f"Failed to delete user. Cause: Password mismatch."
+        }
+        error_json = json.dumps(error_message)
+        return error_json, 500
     delete_user_by_email(user, CONNECTION_STRING)
     return "", 204

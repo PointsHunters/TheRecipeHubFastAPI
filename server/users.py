@@ -181,9 +181,8 @@ class User:
         fullname = user_list[2]
         email = user_list[3]
         password = user_list[4]
-        second_password = user_list[5]
 
-        obj = cls(id=id, username=username, fullname=fullname, email=email, password=password, second_password=second_password)
+        obj = cls(id=id, username=username, fullname=fullname, email=email, password=password)
         return obj
 
     def to_dict(self):
